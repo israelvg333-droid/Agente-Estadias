@@ -1,0 +1,97 @@
+{
+  "generated_at": "2026-06-18T12:41:07",
+  "input": {
+    "audio": null,
+    "transcript": "data\\audios\\ejemplo.txt",
+    "mode": "transcript_only"
+  },
+  "transcription": {
+    "text": "Necesito ayuda urgente. Hay un choque en la avenida Reforma numero 120, cerca de la escuela. Una persona esta herida y necesitamos una ambulancia.",
+    "engine": "manual_txt",
+    "language": "es",
+    "status": "ok",
+    "source": "data\\audios\\ejemplo.txt"
+  },
+  "acoustic_features": {
+    "duration_seconds": null,
+    "mean_energy": null,
+    "energy_std": null,
+    "peak_amplitude": null,
+    "zero_crossing_rate": null,
+    "estimated_f0_hz": null,
+    "silence": {
+      "silence_ratio": null,
+      "pause_count": null,
+      "mean_pause_seconds": null,
+      "longest_pause_seconds": null
+    },
+    "approx_speech_rate": null,
+    "audio_quality": "no_evaluada",
+    "note": "modo_transcript_only"
+  },
+  "semantic_analysis": {
+    "word_count": 24,
+    "emergency_keywords": [
+      "ambulancia",
+      "ayuda",
+      "choque",
+      "urgente"
+    ],
+    "joke_or_mockery_keywords": [],
+    "incident_keywords": [
+      "choque"
+    ],
+    "has_location": true,
+    "has_affected_people": true,
+    "has_incident_type": true,
+    "completeness_items": {
+      "has_location": true,
+      "has_affected_people": true,
+      "has_incident_type": true,
+      "has_minimum_detail": true
+    },
+    "completeness_score": 1.0,
+    "text_is_empty": false
+  },
+  "intent_analysis": {
+    "intent": "reporte_emergencia_o_incidente",
+    "has_emergency_intent": true,
+    "has_high_risk_terms": true,
+    "high_risk_terms": [
+      "ambulancia"
+    ]
+  },
+  "coherence_analysis": {
+    "coherence_score": 1.0,
+    "evasive_responses": [],
+    "simple_contradictions": [],
+    "topic_shift_markers": [],
+    "sentence_count": 3
+  },
+  "score": {
+    "seriousness_score": 1.0,
+    "improcedence_score": 0.0,
+    "confidence": 0.75,
+    "recommendation": "escalar_humano",
+    "evidence": [
+      "Terminos de alto riesgo presentes.",
+      "Se detectaron terminos de alto riesgo; se prioriza seguridad.",
+      "Palabras de emergencia: ambulancia, ayuda, choque, urgente.",
+      "Tipo de incidente detectado: choque.",
+      "Se detecto posible ubicacion.",
+      "Se mencionan posibles personas afectadas.",
+      "Intencion estimada: reporte_emergencia_o_incidente."
+    ],
+    "safety_note": "Estimacion probabilistica. No recomienda colgar ni cerrar llamadas automaticamente."
+  },
+  "recommendation": "escalar_humano",
+  "evidence": [
+    "Terminos de alto riesgo presentes.",
+    "Se detectaron terminos de alto riesgo; se prioriza seguridad.",
+    "Palabras de emergencia: ambulancia, ayuda, choque, urgente.",
+    "Tipo de incidente detectado: choque.",
+    "Se detecto posible ubicacion.",
+    "Se mencionan posibles personas afectadas.",
+    "Intencion estimada: reporte_emergencia_o_incidente."
+  ]
+}

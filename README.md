@@ -1,43 +1,67 @@
 # Subagente de seriedad de llamadas
 
-MVP local en Python para estimar de forma probabilistica la seriedad de una llamada a partir de audio y/o transcripcion. El sistema combina senales acusticas basicas, analisis semantico por reglas y una politica operativa conservadora.
+MVP local en Python para estimar de forma probabilistica la seriedad de una llamada a partir de audio y/o transcripcion. El foco actual es audio-first: la transcripcion se usa como apoyo, no como eje principal. El sistema combina:
 
-El resultado no es una verdad absoluta ni una decision automatica de cierre. La salida sirve como apoyo para continuar, pedir mas informacion, escalar a humano o marcar posible improcedencia.
+- Transcripcion local con Whisper, si esta instalado.
+- Extraccion acustica con `librosa` y `numpy` (energia, F0, silencios, pausas, MFCCs, centroide espectral, SNR y mas).
+- Indicadores paralinguisticos explicables para llamadas de emergencia: stress vocal, urgencia, nerviosismo, desesperacion, calma, agresividad acustica, inestabilidad vocal y confiabilidad del audio.
+- Analisis semantico por reglas (palabras clave, completitud, deteccion de intencion).
+- Analisis de coherencia (evasivas, contradicciones, cambios de tema).
+- Politica de decision conservadora.
+
+El resultado es una ayuda operativa. No debe usarse para cerrar llamadas automaticamente ni para afirmar que una llamada es falsa.
+
+---
 
 ## Instalacion
 
-```bash
-cd subagente_seriedad
+Desde Windows PowerShell:
+
+```powershell
+cd "C:\ruta\al\proyecto\subagente_seriedad"
 python -m venv .venv
-.venv\Scripts\activate
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
-Whisper local es opcional. Si desea transcripcion automatica desde audio:
+Whisper local es opcional, pero necesario para transcribir audio automaticamente:
 
-```bash
+```powershell
 pip install openai-whisper
 ```
 
-Si Whisper no esta instalado, use el modo con transcripcion manual:
+Para `.mp3` y `.m4a`, `librosa` puede requerir que FFmpeg este disponible en el sistema.
 
-```bash
-python main.py --transcript data/audios/ejemplo.txt
-```
+---
 
 ## Uso
 
-Con audio:
+### Con audio (requiere Whisper instalado)
 
-```bash
-python main.py --audio data/audios/ejemplo.wav
+```powershell
+python main.py --audio data\audios\ejemplo.wav
+python main.py --audio data\audios\ejemplo.mp3 --model base
 ```
 
-Con transcripcion manual:
+Modelos de Whisper disponibles:
 
-```bash
-python main.py --transcript data/audios/ejemplo.txt
+| Modelo | Velocidad | Precision |
+|--------|-----------|-----------|
+| `tiny` | Alta      | Basica    |
+| `base` | Media     | Buena     |
+| `small`| Baja      | Alta      |
+
+### Con transcripcion manual (sin Whisper)
+
+```powershell
+python main.py --transcript data\audios\ejemplo.txt
 ```
+
+En modo transcript-only, `acoustic_features` se genera con valores `null` pero incluye `word_count_from_transcript`.
+
+---
+
+## Resultados
 
 Los resultados se guardan en:
 
@@ -45,56 +69,185 @@ Los resultados se guardan en:
 data/outputs/resultado_<fecha>.json
 ```
 
-## Estructura
-
-```text
-subagente_seriedad/
-├── README.md
-├── requirements.txt
-├── .env.example
-├── main.py
-├── data/
-│   ├── audios/
-│   └── outputs/
-├── src/
-│   ├── audio/
-│   ├── asr/
-│   ├── semantic/
-│   ├── scoring/
-│   ├── utils/
-│   └── report/
-└── docs/
-    ├── METODOLOGIA_BASE.md
-    └── IMPLEMENTACION_INICIAL.md
-```
-
-## Salida principal
-
-El campo `score` tiene esta forma:
+### Estructura del JSON
 
 ```json
 {
-  "seriousness_score": 0.0,
-  "improcedence_score": 0.0,
-  "confidence": 0.0,
-  "recommendation": "continuar | pedir_mas_informacion | escalar_humano | posible_improcedente",
+  "generated_at": "2026-06-29T12:00:00",
+  "input": {},
+  "transcription": {},
+  "acoustic_features": {
+    "duration_seconds": null,
+    "mfcc_mean": null,
+    "mfcc_std": null,
+    "spectral_centroid_hz": null,
+    "word_count_from_transcript": 24,
+    "acoustic_anomaly_flags": []
+  },
+  "semantic_analysis": {},
+  "intent_analysis": {},
+  "coherence_analysis": {},
+  "score": {
+    "seriousness_score": 0.0,
+    "improcedence_score": 0.0,
+    "confidence": 0.0,
+    "recommendation": "continuar | pedir_mas_informacion | escalar_humano | posible_improcedente",
+    "evidence": [],
+    "audio_priority": {},
+    "safety_note": "..."
+  },
+  "recommendation": "...",
   "evidence": []
 }
 ```
 
+### Recomendaciones posibles
+
+| Recomendacion           | Cuando se aplica                                         |
+|-------------------------|----------------------------------------------------------|
+| `escalar_humano`        | Terminos de alto riesgo detectados                       |
+| `continuar`             | Incidente + ubicacion + coherencia suficiente            |
+| `pedir_mas_informacion` | Informacion incompleta o confianza baja                  |
+| `posible_improcedente`  | Broma detectada o anomalias multiples sin riesgo critico |
+
+### Reglas de seguridad
+
+- Nunca recomienda colgar.
+- Si la confianza es baja, recomienda `pedir_mas_informacion`.
+- Si hay terminos criticos (arma, disparo, incendio, etc.), recomienda `escalar_humano`.
+
+---
+
+## Pruebas
+
+```powershell
+pip install pytest
+python -m pytest tests/ -v
+```
+
+Los tests cubren:
+
+- `test_text_analyzer.py`: normalizacion, palabras clave, completitud
+- `test_coherence_analyzer.py`: evasivas, contradicciones, cambios de tema
+- `test_decision_policy.py`: todas las rutas de la politica de decision
+- `test_scoring.py`: calculo de scores, confianza, recomendaciones
+- `test_vad.py`: deteccion de silencios y pausas
+- `test_acoustic_features.py`: features acusticas, clipping, SNR, MFCCs
+- `test_preprocessing.py`: validacion de rutas y normalizacion de audio
+
+---
+
+## Features acusticas extraidas
+
+Cuando hay audio disponible se extraen:
+
+| Feature                   | Descripcion                                          |
+|---------------------------|------------------------------------------------------|
+| `duration_seconds`        | Duracion del audio                                   |
+| `rms_energy`              | Energia RMS global                                   |
+| `mean_energy`             | Energia promedio por trama                           |
+| `max_energy`              | Energia maxima por trama                             |
+| `energy_std`              | Desviacion de energia                                |
+| `zero_crossing_rate`      | Tasa de cruces por cero                              |
+| `estimated_f0_hz`         | Frecuencia fundamental media (rango voz: 70-600 Hz) |
+| `mfcc_mean`               | Media de cada uno de los 13 primeros MFCCs           |
+| `mfcc_std`                | Desviacion de cada MFCC                              |
+| `spectral_centroid_hz`    | Centroide espectral medio (brillo tonal)             |
+| `silence_ratio`           | Proporcion de silencio                               |
+| `pause_count`             | Numero de pausas detectadas                          |
+| `estimated_snr_db`        | SNR aproximado en dB                                 |
+| `audio_quality`           | Calidad estimada del audio                           |
+| `clipping_ratio`          | Proporcion de muestras con clipping                  |
+| `acoustic_anomaly_flags`  | Lista de anomalias detectadas                        |
+| `approx_speech_rate`      | Velocidad de habla aproximada (palabras/minuto)      |
+| `word_count_from_transcript` | Palabras contadas desde la transcripcion          |
+
+### Indicadores acusticos de emergencia
+
+`acoustic_features.emergency_audio_indicators` agrega una capa de inferencia explicable basada en prosodia, energia, pausas, F0, ritmo y calidad del audio:
+
+| Indicador | Uso |
+|-----------|-----|
+| `stress_vocal_score` | Variabilidad de energia, F0 y pitch asociada a activacion vocal |
+| `urgency_score` | Ritmo de habla, intensidad y baja proporcion de silencio |
+| `nervousness_score` | F0 variable, pausas, ZCR e inestabilidad temporal |
+| `desperation_score` | Combinacion de stress, urgencia y rango de F0 |
+| `calm_score` | Evidencia acustica de baja activacion |
+| `aggression_score` | Energia alta, centroide espectral y ZCR elevados |
+| `voice_instability_score` | Variacion de F0 y energia |
+| `audio_reliability` | Confiabilidad de los indicadores segun calidad, SNR, clipping y silencio |
+| `seriousness_audio_score` | Estimacion acustica primaria para alimentar el score final |
+
+---
+
+## Estructura del proyecto
+
+```text
+subagente_seriedad/
+├── main.py
+├── requirements.txt
+├── README.md
+├── data/
+│   ├── audios/
+│   └── outputs/
+├── docs/
+│   ├── METODOLOGIA_BASE.md
+│   ├── IMPLEMENTACION_INICIAL.md
+│   ├── CAMBIOS_MULTIMODAL.md
+│   └── Implementacion_20260629.md
+├── tests/
+│   ├── conftest.py
+│   ├── test_text_analyzer.py
+│   ├── test_coherence_analyzer.py
+│   ├── test_decision_policy.py
+│   ├── test_scoring.py
+│   ├── test_vad.py
+│   ├── test_acoustic_features.py
+│   └── test_preprocessing.py
+└── src/
+    ├── audio/
+    │   ├── preprocessing.py
+    │   ├── acoustic_features.py
+    │   └── vad.py
+    ├── asr/
+    │   └── transcriber.py
+    ├── semantic/
+    │   ├── text_analyzer.py
+    │   ├── intent_analyzer.py
+    │   └── coherence_analyzer.py
+    ├── scoring/
+    │   ├── seriousness_scorer.py
+    │   └── decision_policy.py
+    ├── report/
+    │   └── implementation_report.py
+    └── utils/
+        ├── config.py
+        └── logger.py
+```
+
+---
+
 ## Limitaciones actuales
 
-- No hay telefonia real, SIP, Twilio ni WebRTC.
+- No hay telefonia real, SIP, Twilio, WebRTC ni streaming.
 - No se cierran llamadas automaticamente.
 - No hay entrenamiento de CNN-LSTM ni modelo supervisado.
-- El ASR depende de Whisper local si se usa `--audio`; si no esta instalado, use `--transcript`.
-- Las reglas semanticas son heuristicas iniciales y deben calibrarse con datos reales.
-- Las features acusticas son basicas y pueden fallar con audio de mala calidad.
+- Los indicadores acusticos nuevos son heuristicas auditables, no un modelo SER calibrado.
+- Whisper en CPU puede ser lento, especialmente con `base` y `small`.
+- Las probabilidades son heuristicas, no estan calibradas estadisticamente.
+- La deteccion de F0, tempo, SNR y silencios puede fallar con ruido, musica, multiples voces o mala codificacion.
+- Las reglas semanticas requieren validacion con datos reales anonimizados.
+- Para `.mp3` y `.m4a`, la carga depende del soporte local de decodificacion (FFmpeg).
 
-## Siguientes pasos
+---
 
-- Construir un dataset etiquetado y criterios de anotacion.
-- Validar las reglas con llamadas simuladas y reales anonimizadas.
-- Agregar evaluacion con precision, recall para llamadas serias, F1 y matriz de confusion.
-- Probar `faster-whisper` como alternativa de ASR local.
-- Entrenar modelos baseline clasicos antes de considerar deep learning.
+## Proximos pasos recomendados
+
+1. Construir un dataset etiquetado con llamadas simuladas y anonimizadas.
+2. Validar umbrales acusticos con audios reales.
+3. Agregar evaluacion con precision, recall, F1 y matriz de confusion.
+4. Probar `faster-whisper` como alternativa de ASR local mas eficiente.
+5. Evaluar openSMILE/eGeMAPS y ComParE como extractor estandarizado de SER.
+6. Entrenar modelos baseline clasicos (logistic regression, random forest) antes de considerar CNN-LSTM.
+7. Evaluar embeddings wav2vec 2.0, HuBERT, WavLM o SpeechBrain cuando exista dataset etiquetado.
+8. Agregar interfaz de visualizacion con Streamlit.

@@ -1,0 +1,97 @@
+{
+  "generated_at": "2026-06-23T14:39:11",
+  "input": {
+    "audio": "data\\audios\\1757078926.92210.mp3",
+    "transcript": null,
+    "mode": "audio"
+  },
+  "transcription": {
+    "text": "",
+    "engine": "openai-whisper-local-tiny",
+    "model": "tiny",
+    "language": "es",
+    "status": "whisper_error",
+    "message": "Whisper no pudo transcribir el audio. Verifique que ffmpeg este instalado y disponible en PATH. Detalle: [WinError 2] El sistema no puede encontrar el archivo especificado"
+  },
+  "acoustic_features": {
+    "duration_seconds": 670.752,
+    "rms_energy": 0.090225,
+    "mean_energy": 0.051367,
+    "max_energy": 0.369086,
+    "energy_std": 0.074173,
+    "peak_amplitude": 1.0,
+    "zero_crossing_rate": 0.114156,
+    "estimated_tempo_bpm": null,
+    "estimated_f0_hz": 283.356,
+    "estimated_f0_min_hz": 65.306,
+    "estimated_f0_max_hz": 2285.714,
+    "estimated_f0_std_hz": 376.538,
+    "silence_ratio": 0.641473,
+    "pause_count": 300,
+    "mean_pause_seconds": 1.434,
+    "longest_pause_seconds": 68.064,
+    "silence": {
+      "silence_ratio": 0.6414734230365493,
+      "pause_count": 300,
+      "mean_pause_seconds": 1.4340266666666666,
+      "longest_pause_seconds": 68.064
+    },
+    "approx_speech_rate": 0.0,
+    "audio_quality": "posible_saturacion",
+    "clipping_ratio": 4e-06,
+    "estimated_snr_db": 57.452,
+    "acoustic_anomaly_flags": [
+      "pausas_prolongadas",
+      "posible_mala_calidad_audio"
+    ],
+    "word_count_from_transcript": 0
+  },
+  "semantic_analysis": {
+    "word_count": 0,
+    "emergency_keywords": [],
+    "joke_or_mockery_keywords": [],
+    "incident_keywords": [],
+    "has_location": false,
+    "has_affected_people": false,
+    "has_incident_type": false,
+    "completeness_items": {
+      "has_location": false,
+      "has_affected_people": false,
+      "has_incident_type": false,
+      "has_minimum_detail": false
+    },
+    "completeness_score": 0.0,
+    "text_is_empty": true
+  },
+  "intent_analysis": {
+    "intent": "sin_contenido",
+    "has_emergency_intent": false,
+    "has_high_risk_terms": false,
+    "high_risk_terms": []
+  },
+  "coherence_analysis": {
+    "coherence_score": 0.85,
+    "evasive_responses": [],
+    "simple_contradictions": [],
+    "topic_shift_markers": [],
+    "sentence_count": 0
+  },
+  "score": {
+    "seriousness_score": 0.267,
+    "improcedence_score": 0.45,
+    "confidence": 0.425,
+    "recommendation": "pedir_mas_informacion",
+    "evidence": [
+      "Pausas prolongadas detectadas.",
+      "La confianza es baja; se debe pedir mas informacion.",
+      "Intencion estimada: sin_contenido."
+    ],
+    "safety_note": "Estimacion probabilistica. No recomienda colgar ni cerrar llamadas automaticamente."
+  },
+  "recommendation": "pedir_mas_informacion",
+  "evidence": [
+    "Pausas prolongadas detectadas.",
+    "La confianza es baja; se debe pedir mas informacion.",
+    "Intencion estimada: sin_contenido."
+  ]
+}

@@ -36,6 +36,12 @@ def parse_args() -> argparse.Namespace:
         help="Directorio de salida. Por defecto: data/outputs/",
     )
     parser.add_argument("--language", default="es", help="Idioma para Whisper local.")
+    parser.add_argument(
+        "--model",
+        choices=("tiny", "base", "small"),
+        default="tiny",
+        help="Modelo de Whisper local a usar con --audio.",
+    )
     return parser.parse_args()
 
 
@@ -78,7 +84,9 @@ def _get_transcript(args: argparse.Namespace) -> dict[str, Any]:
     if args.transcript:
         return read_manual_transcript(args.transcript)
     validate_audio_path(args.audio)
-    transcript = transcribe_audio(args.audio, language=args.language)
+    transcript = transcribe_audio(
+        args.audio, language=args.language, model_name=args.model
+    )
     if transcript.get("status") != "ok":
         logger.warning(transcript.get("message", "No se pudo transcribir audio."))
     return transcript
@@ -88,14 +96,16 @@ def _get_acoustic_features(
     audio_path: str | None, transcript_text: str, config: AppConfig
 ) -> dict[str, Any]:
     if not audio_path:
-        return empty_acoustic_features("modo_transcript_only")
+        return enrich_with_text_rate(
+            empty_acoustic_features("modo_transcript_only"), transcript_text
+        )
     try:
         audio, sample_rate = load_audio(audio_path, sample_rate=config.sample_rate)
-        features = extract_acoustic_features(audio, sample_rate)
+        features = extract_acoustic_features(audio, sample_rate, config.audio_analysis)
         return enrich_with_text_rate(features, transcript_text)
     except Exception as exc:
         logger.warning("No se pudieron extraer features acusticas: %s", exc)
-        return empty_acoustic_features(str(exc))
+        return enrich_with_text_rate(empty_acoustic_features(str(exc)), transcript_text)
 
 
 def main() -> None:

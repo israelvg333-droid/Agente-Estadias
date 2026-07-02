@@ -1,0 +1,100 @@
+{
+  "generated_at": "2026-07-01T11:36:42",
+  "input": {
+    "audio": null,
+    "transcript": "data\\audios\\test_broma.txt",
+    "mode": "transcript_only"
+  },
+  "transcription": {
+    "text": "jaja era una broma no paso nada me estaba riendo",
+    "engine": "manual_txt",
+    "language": "es",
+    "status": "ok",
+    "source": "data\\audios\\test_broma.txt"
+  },
+  "acoustic_features": {
+    "duration_seconds": null,
+    "rms_energy": null,
+    "mean_energy": null,
+    "max_energy": null,
+    "energy_std": null,
+    "peak_amplitude": null,
+    "zero_crossing_rate": null,
+    "estimated_tempo_bpm": null,
+    "estimated_f0_hz": null,
+    "estimated_f0_min_hz": null,
+    "estimated_f0_max_hz": null,
+    "estimated_f0_std_hz": null,
+    "mfcc_mean": null,
+    "mfcc_std": null,
+    "spectral_centroid_hz": null,
+    "silence_ratio": null,
+    "pause_count": null,
+    "mean_pause_seconds": null,
+    "longest_pause_seconds": null,
+    "silence": {
+      "silence_ratio": null,
+      "pause_count": null,
+      "mean_pause_seconds": null,
+      "longest_pause_seconds": null
+    },
+    "approx_speech_rate": null,
+    "word_count_from_transcript": 10,
+    "audio_quality": "no_evaluada",
+    "clipping_ratio": null,
+    "estimated_snr_db": null,
+    "acoustic_anomaly_flags": [],
+    "note": "modo_transcript_only"
+  },
+  "semantic_analysis": {
+    "word_count": 10,
+    "emergency_keywords": [],
+    "joke_or_mockery_keywords": [
+      "broma",
+      "jaja"
+    ],
+    "incident_keywords": [],
+    "has_location": false,
+    "has_affected_people": false,
+    "has_incident_type": false,
+    "completeness_items": {
+      "has_location": false,
+      "has_affected_people": false,
+      "has_incident_type": false,
+      "has_minimum_detail": false
+    },
+    "completeness_score": 0.0,
+    "text_is_empty": false
+  },
+  "intent_analysis": {
+    "intent": "posible_broma_o_interaccion_improcedente",
+    "has_emergency_intent": false,
+    "has_high_risk_terms": false,
+    "high_risk_terms": []
+  },
+  "coherence_analysis": {
+    "coherence_score": 1.0,
+    "evasive_responses": [],
+    "simple_contradictions": [],
+    "topic_shift_markers": [],
+    "sentence_count": 1
+  },
+  "score": {
+    "seriousness_score": 0.1,
+    "improcedence_score": 0.75,
+    "confidence": 0.65,
+    "recommendation": "pedir_mas_informacion",
+    "evidence": [
+      "Se detectaron terminos asociados a broma o burla.",
+      "Falta informacion critica para evaluar el reporte.",
+      "Intencion estimada: posible_broma_o_interaccion_improcedente."
+    ],
+    "safety_note": "Estimacion probabilistica. No recomienda colgar ni cerrar llamadas automaticamente."
+  },
+  "recommendation": "pedir_mas_informacion",
+  "evidence": [
+    "Se detectaron terminos asociados a broma o burla.",
+    "Falta informacion critica para evaluar el reporte.",
+    "Intencion estimada: posible_broma_o_interaccion_improcedente."
+  ]
+}

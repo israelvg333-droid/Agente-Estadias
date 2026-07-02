@@ -29,7 +29,13 @@ def load_audio(audio_path: str | Path, sample_rate: int = 16000) -> Tuple[Any, i
             "Tambien puede usar --transcript para ejecutar solo el analisis textual."
         ) from exc
 
-    audio, sr = librosa.load(path, sr=sample_rate, mono=True)
+    try:
+        audio, sr = librosa.load(path, sr=sample_rate, mono=True)
+    except Exception as exc:
+        raise RuntimeError(
+            f"No se pudo cargar el audio {path}. Verifique que el formato sea valido "
+            "y que ffmpeg/libsndfile pueda decodificarlo, especialmente para .mp3 o .m4a."
+        ) from exc
     if audio.size == 0:
         raise ValueError("El archivo de audio no contiene muestras utiles.")
     return normalize_audio(audio), sr
@@ -38,7 +44,5 @@ def load_audio(audio_path: str | Path, sample_rate: int = 16000) -> Tuple[Any, i
 def normalize_audio(audio: Any) -> Any:
     import numpy as np
 
-    peak = float(np.max(np.abs(audio))) if audio.size else 0.0
-    if peak <= 1e-8:
-        return audio.astype(np.float32)
-    return (audio / peak).astype(np.float32)
+    clean = np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0).astype(np.float32)
+    return np.clip(clean, -1.0, 1.0)

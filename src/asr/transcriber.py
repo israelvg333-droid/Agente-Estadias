@@ -4,7 +4,9 @@ from pathlib import Path
 from typing import Any
 
 
-def transcribe_audio(audio_path: str | Path, language: str = "es") -> dict[str, Any]:
+def transcribe_audio(
+    audio_path: str | Path, language: str = "es", model_name: str = "tiny"
+) -> dict[str, Any]:
     path = Path(audio_path)
     try:
         import whisper
@@ -17,15 +19,39 @@ def transcribe_audio(audio_path: str | Path, language: str = "es") -> dict[str, 
             "message": "Whisper no esta instalado. Use --transcript archivo.txt.",
         }
 
-    model = whisper.load_model("base")
-    result = model.transcribe(str(path), language=language)
+    try:
+        model = whisper.load_model(model_name)
+        result = _transcribe_with_fallback(model, path, language)
+    except Exception as exc:
+        return {
+            "text": "",
+            "engine": f"openai-whisper-local-{model_name}",
+            "model": model_name,
+            "language": language,
+            "status": "whisper_error",
+            "message": (
+                "Whisper no pudo transcribir el audio. Verifique que ffmpeg este "
+                f"instalado y disponible en PATH. Detalle: {exc}"
+            ),
+        }
     return {
         "text": (result.get("text") or "").strip(),
-        "engine": "openai-whisper-local-base",
+        "engine": f"openai-whisper-local-{model_name}",
+        "model": model_name,
         "language": result.get("language", language),
         "status": "ok",
         "segments": result.get("segments", []),
     }
+
+
+def _transcribe_with_fallback(model: Any, path: Path, language: str) -> dict[str, Any]:
+    try:
+        return model.transcribe(str(path), language=language)
+    except FileNotFoundError:
+        from src.audio.preprocessing import load_audio
+
+        audio, _ = load_audio(path, sample_rate=16000)
+        return model.transcribe(audio, language=language)
 
 
 def read_manual_transcript(transcript_path: str | Path) -> dict[str, Any]:

@@ -18,8 +18,13 @@ def analyze_intent(text_analysis: dict[str, Any]) -> dict[str, Any]:
         intent = "indeterminado"
 
     risk_terms = {
+        # Spanish
         "arma", "balazo", "disparo", "herido", "sangre", "incendio",
         "secuestro", "infarto", "ambulancia", "violencia",
+        # English
+        "gun", "weapon", "gunshot", "shot", "shooting", "injured", "bleeding",
+        "blood", "fire", "kidnapping", "heart attack", "ambulance", "violence",
+        "stabbing", "dead", "dying", "assault",
     }
     high_risk_matches = sorted(set(text_analysis.get("emergency_keywords", [])) & risk_terms)
 

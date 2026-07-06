@@ -79,4 +79,18 @@ def acoustic_with_anomalies():
         "estimated_f0_max_hz": None,
         "estimated_f0_std_hz": None,
         "estimated_tempo_bpm": None,
+        "emergency_audio_indicators": {
+            "stress_vocal_score": None,
+            "urgency_score": None,
+            "nervousness_score": None,
+            "desperation_score": None,
+            "calm_score": None,
+            "aggression_score": None,
+            "voice_instability_score": None,
+            "audio_reliability": 0.0,
+            "seriousness_audio_score": None,
+            "indicator_flags": [],
+            "method": "not_available",
+            "note": "test",
+        },
     }

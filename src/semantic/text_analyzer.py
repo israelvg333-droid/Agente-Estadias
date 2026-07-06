@@ -6,29 +6,56 @@ from typing import Any
 
 
 EMERGENCY_TERMS = {
+    # Spanish
     "emergencia", "auxilio", "ayuda", "urgente", "ambulancia", "policia",
     "bomberos", "incendio", "choque", "accidente", "asalto", "robo",
     "arma", "balazo", "disparo", "herido", "sangre", "violencia",
     "golpearon", "secuestro", "amenaza", "desmayo", "infarto", "medico",
+    # English
+    "emergency", "help", "urgent", "ambulance", "police", "fire department",
+    "firefighters", "fire", "crash", "robbery", "theft", "weapon", "gun",
+    "gunshot", "shot", "shooting", "injured", "bleeding", "blood",
+    "attacked", "kidnapping", "threat", "fainted", "heart attack", "doctor",
+    "911", "assault", "stabbing", "dead", "dying",
 }
 JOKE_TERMS = {
+    # Spanish
     "jaja", "jeje", "risa", "broma", "mentira", "jugando", "molestar",
     "troleo", "falso", "no es cierto", "era broma", "jajaja", "xd",
+    # English
+    "haha", "hehe", "lol", "lmao", "lmfao", "rofl", "joking", "prank",
+    "kidding", "fake", "jk", "just kidding", "not real", "it was a joke",
+    "i was joking", "not serious", "fooling around",
 }
 LOCATION_HINTS = {
+    # Spanish
     "calle", "avenida", "colonia", "municipio", "delegacion", "esquina",
     "numero", "km", "kilometro", "carretera", "casa", "edificio",
     "parque", "escuela", "hospital", "tienda", "plaza",
+    # English
+    "street", "avenue", "neighborhood", "district", "corner", "highway",
+    "road", "house", "building", "park", "school", "store", "mall",
+    "intersection", "boulevard", "lane", "drive", "block", "suburb",
 }
 VICTIM_HINTS = {
+    # Spanish
     "persona", "senor", "senora", "nino", "nina", "adulto", "herido",
     "victima", "mi mama", "mi papa", "mi hijo", "mi hija", "alguien",
     "conductor", "pasajero",
+    # English
+    "person", "man", "woman", "child", "kid", "adult", "injured",
+    "victim", "my mom", "my dad", "my son", "my daughter", "someone",
+    "driver", "passenger", "guy", "lady", "elderly", "baby",
 }
 INCIDENT_HINTS = {
+    # Spanish
     "incendio", "robo", "asalto", "choque", "accidente", "pelea",
     "agresion", "violencia", "disparo", "balazo", "desmayo", "fuga",
     "gas", "inundacion", "amenaza", "secuestro",
+    # English
+    "fire", "robbery", "theft", "crash", "accident", "fight",
+    "assault", "violence", "gunshot", "shooting", "stabbing", "fainted",
+    "gas leak", "flood", "threat", "kidnapping", "overdose", "break-in",
 }
 
 

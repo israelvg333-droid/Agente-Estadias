@@ -34,7 +34,7 @@ def derive_emergency_audio_indicators(
     zcr = _value(features.get("zero_crossing_rate"))
     spectral_centroid = _value(features.get("spectral_centroid_hz"))
 
-    stress = _weighted_mean(
+    stress = _mean_valid(
         (
             _score_above(energy_std, 0.035, 0.14),
             _score_above(f0_std, 18.0, 95.0),
@@ -43,7 +43,7 @@ def derive_emergency_audio_indicators(
             _score_above(max_energy, 0.12, 0.55),
         )
     )
-    urgency = _weighted_mean(
+    urgency = _mean_valid(
         (
             _score_above(speech_rate, 135.0, 240.0),
             _score_above(mean_energy, 0.035, 0.16),
@@ -51,7 +51,7 @@ def derive_emergency_audio_indicators(
             _invert(_score_above(silence_ratio, 0.35, 0.75)),
         )
     )
-    nervousness = _weighted_mean(
+    nervousness = _mean_valid(
         (
             _score_above(f0_std, 15.0, 85.0),
             _score_above(energy_std, 0.03, 0.12),
@@ -60,7 +60,7 @@ def derive_emergency_audio_indicators(
             _score_above(zcr, 0.08, 0.25),
         )
     )
-    desperation = _weighted_mean(
+    desperation = _mean_valid(
         (
             stress,
             urgency,
@@ -68,7 +68,7 @@ def derive_emergency_audio_indicators(
             _score_above(f0_range, 90.0, 280.0),
         )
     )
-    calm = _weighted_mean(
+    calm = _mean_valid(
         (
             1.0 - stress,
             1.0 - nervousness,
@@ -76,7 +76,7 @@ def derive_emergency_audio_indicators(
             _score_between(silence_ratio, 0.08, 0.45),
         )
     )
-    aggression = _weighted_mean(
+    aggression = _mean_valid(
         (
             _score_above(mean_energy, 0.07, 0.2),
             _score_above(max_energy, 0.25, 0.75),
@@ -84,7 +84,7 @@ def derive_emergency_audio_indicators(
             _score_above(zcr, 0.09, 0.25),
         )
     )
-    voice_instability = _weighted_mean(
+    voice_instability = _mean_valid(
         (
             _score_above(f0_std, 20.0, 100.0),
             _score_above(f0_range, 80.0, 300.0),
@@ -182,7 +182,7 @@ def _indicator_flags(**scores: float) -> list[str]:
     return [name for name, enabled in thresholds.items() if enabled]
 
 
-def _weighted_mean(values: tuple[float | None, ...]) -> float:
+def _mean_valid(values: tuple[float | None, ...]) -> float:
     valid = [value for value in values if value is not None]
     if not valid:
         return 0.0

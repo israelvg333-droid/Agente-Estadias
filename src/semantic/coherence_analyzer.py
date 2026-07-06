@@ -7,18 +7,35 @@ from src.semantic.text_analyzer import normalize_text
 
 
 EVASIVE_PATTERNS = [
+    # Spanish
     "no se", "quien sabe", "no quiero decir", "luego te digo", "no importa",
     "da igual", "adivina", "no tengo", "no recuerdo",
+    # English
+    "i don't know", "who knows", "i don't want to say", "never mind",
+    "it doesn't matter", "doesn't matter", "forget it", "i forget",
+    "i can't remember", "i have no idea", "i won't say",
 ]
 CONTRADICTION_PATTERNS = [
+    # Spanish
     ("no paso nada", "emergencia"),
     ("no hay heridos", "herido"),
     ("era broma", "ayuda"),
     ("mentira", "urgente"),
+    # English
+    ("nothing happened", "emergency"),
+    ("no one is hurt", "injured"),
+    ("it was a joke", "help"),
+    ("just kidding", "urgent"),
+    ("no one is injured", "bleeding"),
+    ("everything is fine", "emergency"),
 ]
 TOPIC_SHIFT_TERMS = [
+    # Spanish
     "otra cosa", "cambiando de tema", "mejor hablemos", "saludos",
     "musica", "videojuego", "tarea",
+    # English
+    "anyway", "by the way", "changing the subject", "let's talk about",
+    "music", "video game", "homework", "never mind that", "forget that",
 ]
 
 

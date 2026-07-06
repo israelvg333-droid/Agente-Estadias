@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Tuple
+from typing import Any
 
 
 SUPPORTED_AUDIO_EXTENSIONS = {".wav", ".mp3", ".m4a"}
@@ -18,7 +18,7 @@ def validate_audio_path(audio_path: str | Path) -> Path:
     return path
 
 
-def load_audio(audio_path: str | Path, sample_rate: int = 16000) -> Tuple[Any, int]:
+def load_audio(audio_path: str | Path, sample_rate: int = 16000) -> tuple[Any, int]:
     """Carga audio con librosa si esta disponible."""
     path = validate_audio_path(audio_path)
     try:

@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Entorno virtual
+.venv/
+
+# Pytest
+.pytest_cache/
+.tmp_pytest/
+.tmp_pytest_cache/
+.tmp_pytest_run/
+
+# Resultados generados
+data/outputs/
+
+# Audios
+data/audios/911_recordings/*.mp3

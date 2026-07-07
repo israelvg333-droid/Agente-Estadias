@@ -4,12 +4,11 @@ from __future__ import annotations
 import pytest
 
 from src.scoring.seriousness_scorer import (
-    _clamp,
     _estimate_confidence,
-    _optional_float,
     _nested_float,
     score_call,
 )
+from src.utils.helpers import clamp01, optional_float
 from src.audio.acoustic_features import empty_acoustic_features, enrich_with_text_rate
 
 
@@ -87,24 +86,24 @@ def _coherence_bad():
 
 class TestClamp:
     def test_below_zero(self):
-        assert _clamp(-0.5) == 0.0
+        assert clamp01(-0.5) == 0.0
 
     def test_above_one(self):
-        assert _clamp(1.5) == 1.0
+        assert clamp01(1.5) == 1.0
 
     def test_within_range(self):
-        assert _clamp(0.7) == 0.7
+        assert clamp01(0.7) == 0.7
 
 
 class TestOptionalFloat:
     def test_none_returns_none(self):
-        assert _optional_float(None) is None
+        assert optional_float(None) is None
 
     def test_converts_int(self):
-        assert _optional_float(1) == 1.0
+        assert optional_float(1) == 1.0
 
     def test_converts_float_string(self):
-        assert _optional_float(0.5) == 0.5
+        assert optional_float(0.5) == 0.5
 
 
 class TestNestedFloat:

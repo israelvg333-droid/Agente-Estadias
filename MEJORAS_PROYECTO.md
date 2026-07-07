@@ -1,7 +1,10 @@
 # MEJORAS_PROYECTO.md
 
-Revisión técnica completa del subagente de seriedad de llamadas.  
-Fecha: 2026-07-06
+Historial técnico del subagente de seriedad de llamadas. Cada sesión de trabajo agrega una entrada con fecha. Las secciones **Roadmap Técnico** y **Deuda Técnica** al final del documento son las versiones vivas y se actualizan en cada sesión.
+
+---
+
+# Sesión 2026-07-06 — Revisión técnica completa
 
 ---
 
@@ -363,3 +366,123 @@ El score y la recomendación pueden interpretarse erróneamente como definitivos
 11. **Versionar esquema JSON y limpiar redundancias**: Agregar `schema_version: "2.0"` y eliminar las claves duplicadas `recommendation`/`evidence` del nivel raíz. Documentar la migración para consumidores existentes.
 
 12. **Jitter y shimmer con parselmouth**: Agregar features de estabilidad vocal como preparación para la fase CNN-LSTM una vez que exista dataset etiquetado suficiente.
+
+---
+
+# Sesión 2026-07-07 — Adopción del modo de mantenimiento evolutivo y resolución de DT-2
+
+## Fecha
+
+2026-07-07
+
+## Objetivo de la sesión
+
+Establecer el modo de trabajo permanente de mantenimiento evolutivo, verificar el estado actual del proyecto, reestructurar este documento como historial técnico con secciones vivas de Roadmap y Deuda Técnica, y resolver la deuda técnica DT-2 (helpers duplicados).
+
+## Archivos modificados
+
+- `src/utils/helpers.py` (nuevo)
+- `src/scoring/seriousness_scorer.py`
+- `src/scoring/decision_policy.py`
+- `src/audio/emergency_indicators.py`
+- `tests/test_scoring.py`
+- `MEJORAS_PROYECTO.md`
+
+## Cambios implementados
+
+1. **Creación de `src/utils/helpers.py`** con dos funciones compartidas: `clamp01(value)` (restringe al rango [0, 1]) y `optional_float(value)` (convierte a float preservando None).
+2. **Eliminación de las copias duplicadas**: `_clamp` y `_optional_float` en `seriousness_scorer.py`, `_optional_float` en `decision_policy.py`, y `_clamp` y `_value` en `emergency_indicators.py` (esta última era una tercera copia de `optional_float` con otro nombre, no detectada en la auditoría anterior).
+3. **Actualización de todos los usos** en los tres módulos a los nombres públicos `clamp01` y `optional_float`.
+4. **Actualización de `tests/test_scoring.py`** para importar los helpers desde `src.utils.helpers` en lugar de los nombres privados de `seriousness_scorer`.
+5. **Reestructuración de este documento** al formato de historial: entradas por sesión con fecha, más las secciones vivas Roadmap Técnico y Deuda Técnica al final.
+
+## Justificación técnica
+
+La auditoría del 2026-07-06 identificó la duplicación como recomendación 4.3 (Prioridad Alta). Existían cinco definiciones para dos funciones en tres módulos, lo que obligaba a mantener sincronizadas copias idénticas y ocultaba que `_value` en `emergency_indicators.py` era la misma función con otro nombre. `src/utils` no importa nada de `scoring` ni `audio`, por lo que la extracción no introduce ciclos de importación.
+
+## Beneficios obtenidos
+
+- Una única fuente de verdad para el clamping y la conversión opcional a float.
+- Nombres públicos y descriptivos (`clamp01` deja explícito el rango) en lugar de tres nombres privados distintos para la misma lógica.
+- Se elimina la deuda DT-2 del inventario.
+
+## Riesgos detectados
+
+- Riesgo bajo: el cambio es un refactor mecánico sin cambio de comportamiento. Los `replace_all` fueron verificados con grep para descartar corrupción de identificadores similares.
+
+## Validaciones realizadas
+
+- Suite completa: **114 tests pasando** antes y después del cambio.
+- Verificación de imports: `import main` y uso directo de `clamp01`/`optional_float` sin errores.
+- Smoke test end-to-end: `python main.py --transcript <archivo>` ejecuta el pipeline completo y genera el JSON con la estructura esperada (`escalar_humano` para un guion con términos de alto riesgo).
+- `git status` limpio antes de la sesión; directorios temporales de pytest ya cubiertos por `.gitignore`.
+
+## Recomendaciones futuras
+
+- La siguiente prioridad del roadmap es ampliar los tests de `emergency_indicators.py` (DT-1) y agregar tests de integración end-to-end (DT-9), ambas de impacto Alto.
+- Al conectar `AudioAnalysisConfig` al pipeline de features (recomendación 4.4 de la sesión anterior), aprovechar para mover el filtro de F0 a los campos del config.
+
+---
+
+## Roadmap Técnico
+
+> Sección viva. Actualizada por última vez: 2026-07-07.
+
+### Corto plazo
+
+- [x] Extraer `_clamp` y `_optional_float` a `src/utils/helpers.py` — **completado 2026-07-07**
+- [ ] Ampliar tests de `emergency_indicators.py` (mínimo 15 tests: indicadores individuales, `indicator_flags`, `audio_reliability`) — **siguiente prioridad**
+- [ ] Agregar tests de integración end-to-end (`run_pipeline` con `.wav` sintético generado con `soundfile`)
+- [ ] Configurar `ruff` como linter con `pyproject.toml`
+- [ ] Archivar `2do avance.md` en `docs/archivo/` (requiere confirmación del autor)
+
+### Mediano plazo
+
+- [ ] Dataset etiquetado de 30-50 llamadas simuladas (seria/dudosa/improcedente)
+- [ ] Script `scripts/evaluate.py` con recall, precision, F1 y AUROC
+- [ ] Conectar `AudioAnalysisConfig` al pipeline de features (ventana de análisis precomputada + `f0_min_hz`/`f0_max_hz`)
+- [ ] Evaluar `faster-whisper` como motor ASR alternativo
+
+### Largo plazo
+
+- [ ] Modelos baseline supervisados (regresión logística, random forest, SVM) sobre CSV de features
+- [ ] Interfaz Streamlit para visualización interactiva
+- [ ] Versionar esquema JSON (`schema_version: "2.0"`) y eliminar claves duplicadas del nivel raíz
+- [ ] Jitter y shimmer con `parselmouth`
+- [ ] Diarización de hablantes y análisis por segmentos (chunking)
+
+---
+
+## Deuda Técnica
+
+> Sección viva. Actualizada por última vez: 2026-07-07.
+
+### Alta
+
+| ID | Componente | Descripción |
+|---|---|---|
+| DT-1 | `emergency_indicators.py` | Solo 3 tests para la heurística más compleja del sistema |
+| DT-9 | Tests | Ningún test ejecuta el pipeline completo con audio real o sintético |
+
+### Media
+
+| ID | Componente | Descripción |
+|---|---|---|
+| DT-3 | `AudioAnalysisConfig` | `f0_min_hz`, `f0_max_hz` definidos pero nunca usados |
+| DT-10 | Tooling | Sin linter (`ruff`/`flake8`) ni type checker (`mypy`) configurados |
+
+### Baja
+
+| ID | Componente | Descripción |
+|---|---|---|
+| DT-4 | `acoustic_features.py` | `_analysis_window` se recalcula 4 veces por llamada |
+| DT-5 | `AudioAnalysisConfig` | `analysis_window_seconds` definido en config pero ignorado |
+| DT-6 | JSON de salida | `recommendation` y `evidence` duplicados en nivel raíz |
+| DT-7 | JSON de salida | Sin campo `schema_version` |
+| DT-8 | Documentación | `2do avance.md` obsoleto en la raíz |
+
+### Resueltas
+
+| ID | Descripción | Resuelta en |
+|---|---|---|
+| DT-2 | `_clamp` y `_optional_float` duplicados en 3 módulos (5 definiciones) | 2026-07-07 |

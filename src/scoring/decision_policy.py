@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from src.utils.helpers import optional_float
+
 
 VALID_RECOMMENDATIONS = {
     "continuar",
@@ -29,8 +31,8 @@ def decide_recommendation(
     has_joke = bool(semantic.get("joke_or_mockery_keywords"))
     anomaly_flags = set(acoustic.get("acoustic_anomaly_flags") or [])
     audio_indicators = acoustic.get("emergency_audio_indicators") or {}
-    audio_seriousness = _optional_float(audio_indicators.get("seriousness_audio_score"))
-    audio_reliability = _optional_float(audio_indicators.get("audio_reliability")) or 0.0
+    audio_seriousness = optional_float(audio_indicators.get("seriousness_audio_score"))
+    audio_reliability = optional_float(audio_indicators.get("audio_reliability")) or 0.0
     indicator_flags = set(audio_indicators.get("indicator_flags") or [])
 
     if intent.get("has_high_risk_terms"):
@@ -89,7 +91,3 @@ def decide_recommendation(
 
     evidence.append("El caso conserva incertidumbre operativa.")
     return "pedir_mas_informacion", evidence
-
-
-def _optional_float(value: Any) -> float | None:
-    return float(value) if value is not None else None

@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from src.utils.config import AudioAnalysisConfig
+from src.utils.helpers import clamp01, optional_float
 
 
 def derive_emergency_audio_indicators(
@@ -16,23 +17,23 @@ def derive_emergency_audio_indicators(
     """
 
     cfg = config or AudioAnalysisConfig()
-    energy_std = _value(features.get("energy_std"))
-    mean_energy = _value(features.get("mean_energy"))
-    max_energy = _value(features.get("max_energy"))
-    f0_std = _value(features.get("estimated_f0_std_hz"))
-    f0_mean = _value(features.get("estimated_f0_hz"))
+    energy_std = optional_float(features.get("energy_std"))
+    mean_energy = optional_float(features.get("mean_energy"))
+    max_energy = optional_float(features.get("max_energy"))
+    f0_std = optional_float(features.get("estimated_f0_std_hz"))
+    f0_mean = optional_float(features.get("estimated_f0_hz"))
     f0_range = _range(
-        _value(features.get("estimated_f0_min_hz")),
-        _value(features.get("estimated_f0_max_hz")),
+        optional_float(features.get("estimated_f0_min_hz")),
+        optional_float(features.get("estimated_f0_max_hz")),
     )
-    speech_rate = _value(features.get("approx_speech_rate"))
-    silence_ratio = _value(features.get("silence_ratio"))
-    pause_count = _value(features.get("pause_count"))
-    longest_pause = _value(features.get("longest_pause_seconds"))
-    snr_db = _value(features.get("estimated_snr_db"))
-    clipping_ratio = _value(features.get("clipping_ratio"))
-    zcr = _value(features.get("zero_crossing_rate"))
-    spectral_centroid = _value(features.get("spectral_centroid_hz"))
+    speech_rate = optional_float(features.get("approx_speech_rate"))
+    silence_ratio = optional_float(features.get("silence_ratio"))
+    pause_count = optional_float(features.get("pause_count"))
+    longest_pause = optional_float(features.get("longest_pause_seconds"))
+    snr_db = optional_float(features.get("estimated_snr_db"))
+    clipping_ratio = optional_float(features.get("clipping_ratio"))
+    zcr = optional_float(features.get("zero_crossing_rate"))
+    spectral_centroid = optional_float(features.get("spectral_centroid_hz"))
 
     stress = _mean_valid(
         (
@@ -93,7 +94,7 @@ def derive_emergency_audio_indicators(
     )
     audio_reliability = _audio_reliability(features, snr_db, clipping_ratio, silence_ratio)
 
-    seriousness_from_audio = _clamp(
+    seriousness_from_audio = clamp01(
         0.3 * stress
         + 0.25 * urgency
         + 0.2 * nervousness
@@ -124,7 +125,7 @@ def derive_emergency_audio_indicators(
         "aggression_score": round(aggression, 3),
         "voice_instability_score": round(voice_instability, 3),
         "audio_reliability": round(audio_reliability, 3),
-        "seriousness_audio_score": round(_clamp(seriousness_from_audio), 3),
+        "seriousness_audio_score": round(clamp01(seriousness_from_audio), 3),
         "indicator_flags": flags,
         "method": "heuristic_prosody_energy_pause_f0_baseline",
     }
@@ -165,7 +166,7 @@ def _audio_reliability(
         score -= 0.1
     if silence_ratio is not None and silence_ratio > 0.75:
         score -= 0.15
-    return _clamp(score)
+    return clamp01(score)
 
 
 def _indicator_flags(**scores: float) -> list[str]:
@@ -186,7 +187,7 @@ def _mean_valid(values: tuple[float | None, ...]) -> float:
     valid = [value for value in values if value is not None]
     if not valid:
         return 0.0
-    return _clamp(sum(valid) / len(valid))
+    return clamp01(sum(valid) / len(valid))
 
 
 def _score_above(value: float | None, low: float, high: float) -> float | None:
@@ -194,7 +195,7 @@ def _score_above(value: float | None, low: float, high: float) -> float | None:
         return None
     if high <= low:
         return 0.0
-    return _clamp((value - low) / (high - low))
+    return clamp01((value - low) / (high - low))
 
 
 def _score_between(value: float | None, low: float, high: float) -> float | None:
@@ -204,7 +205,7 @@ def _score_between(value: float | None, low: float, high: float) -> float | None
         return 1.0
     midpoint = (low + high) / 2.0
     distance = min(abs(value - low), abs(value - high))
-    return _clamp(1.0 - distance / max(midpoint, 1.0))
+    return clamp01(1.0 - distance / max(midpoint, 1.0))
 
 
 def _invert(value: float | None) -> float | None:
@@ -219,9 +220,3 @@ def _range(low: float | None, high: float | None) -> float | None:
     return max(0.0, high - low)
 
 
-def _value(value: Any) -> float | None:
-    return float(value) if value is not None else None
-
-
-def _clamp(value: float) -> float:
-    return max(0.0, min(1.0, value))

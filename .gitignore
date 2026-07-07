@@ -16,3 +16,10 @@ data/outputs/
 
 # Audios
 data/audios/911_recordings/*.mp3
+data/audios_descartados/*.mp3
+
+# Audios descartados
+data/audios_descartados/
+
+# Audios del dataset (ignorar solo los mp3)
+data/audios/911_recordings/*.mp3

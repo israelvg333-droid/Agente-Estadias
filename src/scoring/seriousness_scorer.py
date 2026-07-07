@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from src.scoring.decision_policy import decide_recommendation
+from src.utils.helpers import clamp01, optional_float
 
 
 def score_call(
@@ -18,21 +19,21 @@ def score_call(
     has_location = bool(semantic.get("has_location"))
     has_joke = bool(semantic.get("joke_or_mockery_keywords"))
     silence_ratio = _nested_float(acoustic, "silence", "silence_ratio")
-    mean_energy = _optional_float(acoustic.get("mean_energy"))
-    max_energy = _optional_float(acoustic.get("max_energy"))
-    clipping_ratio = _optional_float(acoustic.get("clipping_ratio"))
-    snr_db = _optional_float(acoustic.get("estimated_snr_db"))
-    longest_pause = _optional_float(acoustic.get("longest_pause_seconds"))
-    energy_std = _optional_float(acoustic.get("energy_std"))
+    mean_energy = optional_float(acoustic.get("mean_energy"))
+    max_energy = optional_float(acoustic.get("max_energy"))
+    clipping_ratio = optional_float(acoustic.get("clipping_ratio"))
+    snr_db = optional_float(acoustic.get("estimated_snr_db"))
+    longest_pause = optional_float(acoustic.get("longest_pause_seconds"))
+    energy_std = optional_float(acoustic.get("energy_std"))
     anomaly_flags = set(acoustic.get("acoustic_anomaly_flags") or [])
     audio_quality = acoustic.get("audio_quality")
     audio_indicators = acoustic.get("emergency_audio_indicators") or {}
-    audio_seriousness = _optional_float(audio_indicators.get("seriousness_audio_score"))
-    audio_reliability = _optional_float(audio_indicators.get("audio_reliability"))
-    stress_score = _optional_float(audio_indicators.get("stress_vocal_score"))
-    urgency_score = _optional_float(audio_indicators.get("urgency_score"))
-    nervousness_score = _optional_float(audio_indicators.get("nervousness_score"))
-    calm_score = _optional_float(audio_indicators.get("calm_score"))
+    audio_seriousness = optional_float(audio_indicators.get("seriousness_audio_score"))
+    audio_reliability = optional_float(audio_indicators.get("audio_reliability"))
+    stress_score = optional_float(audio_indicators.get("stress_vocal_score"))
+    urgency_score = optional_float(audio_indicators.get("urgency_score"))
+    nervousness_score = optional_float(audio_indicators.get("nervousness_score"))
+    calm_score = optional_float(audio_indicators.get("calm_score"))
     indicator_flags = set(audio_indicators.get("indicator_flags") or [])
     has_reliable_audio_urgency = (
         audio_seriousness is not None
@@ -92,8 +93,8 @@ def score_call(
     if intent.get("has_high_risk_terms"):
         improcedence -= 0.25
 
-    seriousness = _clamp(seriousness)
-    improcedence = _clamp(improcedence)
+    seriousness = clamp01(seriousness)
+    improcedence = clamp01(improcedence)
     confidence = _estimate_confidence(acoustic, semantic, coherence)
     recommendation, policy_evidence = decide_recommendation(
         seriousness,
@@ -174,7 +175,7 @@ def _estimate_confidence(
     if acoustic.get("audio_quality") == "aceptable":
         confidence += 0.1
     indicators = acoustic.get("emergency_audio_indicators") or {}
-    audio_reliability = _optional_float(indicators.get("audio_reliability"))
+    audio_reliability = optional_float(indicators.get("audio_reliability"))
     if audio_reliability is not None:
         confidence += 0.12 * audio_reliability
     if acoustic.get("audio_quality") in {"baja_senal", "mucho_silencio", "ruido_alto", "posible_saturacion"}:
@@ -183,7 +184,7 @@ def _estimate_confidence(
         confidence -= min(len(acoustic["acoustic_anomaly_flags"]) * 0.03, 0.12)
     confidence += 0.1 * float(semantic.get("completeness_score") or 0.0)
     confidence += 0.1 * float(coherence.get("coherence_score") or 0.0)
-    return _clamp(confidence)
+    return clamp01(confidence)
 
 
 def _nested_float(data: dict[str, Any], key: str, nested_key: str) -> float | None:
@@ -192,10 +193,6 @@ def _nested_float(data: dict[str, Any], key: str, nested_key: str) -> float | No
         return None
     nested = value.get(nested_key)
     return float(nested) if nested is not None else None
-
-
-def _optional_float(value: Any) -> float | None:
-    return float(value) if value is not None else None
 
 
 def _acoustic_seriousness_adjustment(
@@ -228,7 +225,3 @@ def _acoustic_improcedence_adjustment(
     if completeness < 0.5 and coherence_score < 0.55:
         adjustment += 0.1
     return adjustment
-
-
-def _clamp(value: float) -> float:
-    return max(0.0, min(1.0, value))

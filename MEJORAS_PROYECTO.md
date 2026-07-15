@@ -842,7 +842,6 @@ La fase de modelos supervisados del roadmap requiere dos insumos: etiquetas manu
 | ID | Componente | Descripción |
 |---|---|---|
 | DT-14 | Tooling | Directorios `.tmp_pytest*` en la raíz con permisos dañados (Windows); irrecuperables sin consola de administrador (intento con `takeown`/`icacls` falló el 2026-07-15; comando documentado en esa sesión). Usar el basetemp por defecto de pytest |
-| DT-16 | Repositorio | Cinco sesiones de trabajo (2026-07-08 a 2026-07-15) sin commitear: riesgo de pérdida y conflictos con worktrees basados en el HEAD antiguo |
 
 ### Baja
 
@@ -856,6 +855,7 @@ La fase de modelos supervisados del roadmap requiere dos insumos: etiquetas manu
 
 | ID | Descripción | Resuelta en |
 |---|---|---|
+| DT-16 | Cinco sesiones de trabajo (2026-07-08 a 2026-07-15) sin commitear | 2026-07-15 (commit `7d48a48`; incluye limpieza de `.pyc` del índice y retiro de `docs/2do avance.md`) |
 | DT-13 | Registros del checkpoint sin features acústicas persistidas (bloqueaba la exportación para entrenamiento supervisado) | 2026-07-15 |
 | DT-12 | Checkpoint transcrito con Whisper tiny sin parámetros anti-alucinación; 11 transcripciones sospechosas | 2026-07-14 (3) |
 | DT-7 | Sin campo `schema_version` en el JSON de salida | 2026-07-14 |

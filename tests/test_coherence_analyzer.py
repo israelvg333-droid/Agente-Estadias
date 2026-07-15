@@ -1,8 +1,6 @@
 """Tests para src/semantic/coherence_analyzer.py."""
 from __future__ import annotations
 
-import pytest
-
 from src.semantic.coherence_analyzer import analyze_coherence
 
 

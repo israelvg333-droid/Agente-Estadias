@@ -4,7 +4,6 @@ from typing import Any
 
 from src.utils.helpers import optional_float
 
-
 VALID_RECOMMENDATIONS = {
     "continuar",
     "pedir_mas_informacion",
@@ -43,9 +42,12 @@ def decide_recommendation(
         audio_seriousness is not None
         and audio_seriousness >= 0.72
         and audio_reliability >= 0.45
-        and indicator_flags & {"stress_vocal_alto", "urgencia_acustica_alta", "desesperacion_probable"}
+        and indicator_flags
+        & {"stress_vocal_alto", "urgencia_acustica_alta", "desesperacion_probable"}
     ):
-        evidence.append("El audio muestra indicadores fuertes de crisis; se prioriza atencion humana.")
+        evidence.append(
+            "El audio muestra indicadores fuertes de crisis; se prioriza atencion humana."
+        )
         return "escalar_humano", evidence
 
     if confidence is not None and confidence < 0.45:

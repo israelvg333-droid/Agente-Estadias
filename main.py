@@ -20,7 +20,6 @@ from src.semantic.text_analyzer import analyze_text
 from src.utils.config import AppConfig, ensure_directories
 from src.utils.logger import get_logger
 
-
 logger = get_logger("subagente_seriedad")
 
 

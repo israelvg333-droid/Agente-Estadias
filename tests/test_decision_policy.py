@@ -1,8 +1,6 @@
 """Tests para src/scoring/decision_policy.py."""
 from __future__ import annotations
 
-import pytest
-
 from src.scoring.decision_policy import decide_recommendation
 
 

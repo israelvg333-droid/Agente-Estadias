@@ -1,15 +1,13 @@
 """Tests para src/scoring/seriousness_scorer.py."""
 from __future__ import annotations
 
-import pytest
-
+from src.audio.acoustic_features import empty_acoustic_features, enrich_with_text_rate
 from src.scoring.seriousness_scorer import (
     _estimate_confidence,
     _nested_float,
     score_call,
 )
 from src.utils.helpers import clamp01, optional_float
-from src.audio.acoustic_features import empty_acoustic_features, enrich_with_text_rate
 
 
 def _empty_acoustic(note="test"):

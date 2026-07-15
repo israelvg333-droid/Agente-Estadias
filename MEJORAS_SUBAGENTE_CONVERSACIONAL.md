@@ -1,10 +1,47 @@
 # MEJORAS_SUBAGENTE_CONVERSACIONAL
 
+> Documento vivo. Primera version: 2026-07-02 (reorientacion audio-first). Ultima actualizacion: 2026-07-14. El historial detallado por sesion esta en `MEJORAS_PROYECTO.md`.
+
 ## Resumen ejecutivo
 
 Se reoriento el proyecto hacia un enfoque audio-first para estimar la seriedad de llamadas de emergencia. La transcripcion sigue disponible, pero ahora opera como fuente complementaria. La mejora principal fue agregar una capa explicable de indicadores acusticos de emergencia sobre las features ya existentes: stress vocal, urgencia, nerviosismo, desesperacion, calma, agresividad acustica, inestabilidad vocal, confiabilidad del audio y un `seriousness_audio_score`.
 
 Tambien se centralizaron parametros acusticos, se conecto la nueva inferencia al scoring, se ajusto la politica de decision para priorizar casos con audio compatible con crisis y se agregaron pruebas unitarias.
+
+Desde entonces el sistema se ha validado y evolucionado con datos reales:
+
+- **2026-07-07**: helpers compartidos (`clamp01`, `optional_float`), eliminacion de duplicacion en 3 modulos.
+- **2026-07-08**: procesamiento batch del dataset 911 real (316 audios: 280 SERIA / 35 DUDOSA / 0 IMPROCEDENTE), deteccion automatica de transcripciones alucinadas por Whisper (`transcript_quality.py`) con recalibracion de confianza, parametros anti-alucinacion en el ASR y conexion completa de `AudioAnalysisConfig` al pipeline.
+- **2026-07-14**: nuevas features de estabilidad vocal (jitter y shimmer aproximados — temblor de la voz), forma espectral (rolloff, ancho de banda, flatness), indicador `voice_tremor_score` calibrado contra la distribucion real del dataset 911, tests de integracion end-to-end, linter `ruff` configurado y JSON de salida versionado (`schema_version: "1.1"`).
+
+Estado actual: **187 tests pasando, `ruff check` limpio, pipeline verificado end-to-end con audio sintetico y llamadas 911 reales.**
+
+## Actualizacion 2026-07-14 — Estabilidad vocal, integracion y calidad de software
+
+### Nuevas caracteristicas acusticas
+
+- `estimated_jitter_ratio`: perturbacion relativa media de F0 entre tramas vocales consecutivas (serie de `librosa.yin` con mascara 70-600 Hz). Aproximacion al jitter clasico; proxy del temblor de la voz (item 13 de las prioridades del proyecto).
+- `estimated_shimmer_ratio`: perturbacion relativa media de amplitud RMS entre tramas activas consecutivas (excluye transiciones habla-pausa).
+- `spectral_rolloff_hz`, `spectral_bandwidth_hz`, `spectral_flatness`: forma espectral con una unica STFT compartida. Rolloff y ancho de banda complementan al centroide para caracterizar gritos y voz tensa; la flatness detecta espectro tipo ruido (calidad vocal degradada o canal ruidoso).
+
+### Nuevo indicador: `voice_tremor_score`
+
+- Combina jitter, shimmer y desviacion de F0; expone el flag `temblor_vocal_probable` (>= 0.65).
+- **Calibrado con datos reales**: los umbrales de laboratorio saturaban en audio telefonico (jitter aproximado observado 0.12-0.45 en 10 llamadas 911, un orden de magnitud mayor que el jitter ciclo a ciclo clasico). Con los umbrales recalibrados el indicador discrimina (0.22-0.84 en la muestra).
+- **Decision de diseno**: es informativo y NO participa aun en `seriousness_audio_score`, para preservar la comparabilidad con las 315 llamadas ya clasificadas; se integrara con pesos derivados del etiquetado manual. Un test de regresion protege esta propiedad.
+
+### Calidad de software
+
+- `tests/test_integration.py`: primera cobertura end-to-end de `run_pipeline` (modo transcript-only sin mocks; modo audio con `.wav` sintetico de 220 Hz con vibrato y pausa, solo el ASR simulado). Suite total: 187 tests.
+- `pyproject.toml` con `ruff` (reglas E, F, W, I, UP, B): 27 hallazgos auto-corregidos y 9 lineas largas reescritas; el linter queda limpio.
+- `schema_version: "1.1"` en el JSON de salida: los cambios aditivos quedan versionados; la limpieza de claves duplicadas del nivel raiz se hara como esquema 2.0.
+
+### Validacion de esta actualizacion
+
+- 187 tests pasando (169 previos + 18 nuevos, 0 regresiones).
+- `ruff check .` sin hallazgos.
+- Smoke test CLI (`--transcript`) identico al historico: `escalar_humano`, score 0.9.
+- Features nuevas verificadas sobre 10 llamadas reales del dataset 911 sin errores y con valores en rangos plausibles.
 
 ## Problemas encontrados
 
@@ -127,6 +164,8 @@ Caracteristicas utilizadas:
 - Rango de pitch.
 - MFCCs.
 - Centroide espectral.
+- Rolloff, ancho de banda y flatness espectrales (2026-07-14).
+- Jitter y shimmer aproximados (2026-07-14).
 - Proporcion de silencio.
 - Conteo y duracion de pausas.
 - Velocidad aproximada de habla.
@@ -143,6 +182,7 @@ Nuevos indicadores:
 - `calm_score`: baja activacion, habla moderada y silencios no extremos.
 - `aggression_score`: intensidad, centroide espectral y ZCR elevados.
 - `voice_instability_score`: variacion de F0 y energia.
+- `voice_tremor_score` (2026-07-14): temblor vocal desde jitter/shimmer aproximados; informativo, pendiente de integrarse al score primario tras calibracion con etiquetas.
 - `audio_reliability`: penaliza mala calidad, SNR bajo, clipping y silencio excesivo.
 - `seriousness_audio_score`: score acustico primario para fusion.
 
@@ -175,20 +215,24 @@ Cambios en inferencia:
 
 ## Mejoras futuras priorizadas
 
-1. Crear dataset etiquetado y anonimizado con categorias: seria, dudosa, improcedente, stress, urgencia, miedo, agresividad, calma, calidad de audio y tipo de incidente.
+> Actualizado 2026-07-14. Los items ya completados se marcaron; el detalle vivo esta en el Roadmap de `MEJORAS_PROYECTO.md`.
+
+1. **Etiquetado manual estratificado del dataset 911** (35 DUDOSAS + 15 SERIAS como minimo) — es el desbloqueador de todo lo demas: metricas reales, calibracion de umbrales y pesos, e integracion de `voice_tremor_score` al score primario. *(El dataset ya esta procesado: 315 llamadas clasificadas con scores y features.)*
 2. Definir protocolo de anotacion y acuerdo interanotador.
 3. Agregar evaluacion objetiva: recall para llamadas serias como metrica principal, matriz de confusion, F1 macro, AUROC, AUPRC y calibracion.
-4. Incorporar openSMILE/eGeMAPS como extractor opcional para comparar contra features `librosa`.
-5. Entrenar baseline supervisado interpretable con Logistic Regression, Random Forest o XGBoost sobre features acusticas.
-6. Agregar segmentacion temporal para estimar curvas de stress/urgencia por ventana.
-7. Probar embeddings wav2vec 2.0, HuBERT o WavLM como features congeladas.
-8. Evaluar SpeechBrain o modelos SER preentrenados cuando haya datos y hardware adecuados.
-9. Implementar fusion multimodal calibrada: audio como rama primaria y texto como rama auxiliar.
-10. Agregar explainability: contribucion por indicador, importancias de variables y reportes de error.
-11. Implementar cache de modelos ASR si se usa Whisper para evitar cargas repetidas.
-12. Agregar interfaz de inspeccion con graficas de energia, F0, pausas y score temporal.
-13. Evaluar robustez por ruido, acento, edad, genero, discapacidad del habla y canal telefonico.
-14. Preparar API estable para integracion con el sistema multiagente.
+4. Reprocesar los 11 audios con transcripcion sospechosa usando Whisper `base` + parametros anti-alucinacion; hacer backfill acustico del checkpoint para incorporar las features de 2026-07-14 (jitter, shimmer, forma espectral, temblor).
+5. Corregir el sesgo del token "911"/digitos sueltos en `text_analyzer.py` (DT-11; requiere decision de negocio porque cambia el scoring del historico).
+6. Entrenar baseline supervisado interpretable con Logistic Regression, Random Forest o XGBoost sobre features acusticas.
+7. Incorporar openSMILE/eGeMAPS como extractor opcional para comparar contra features `librosa`; `parselmouth` para jitter/shimmer ciclo a ciclo exactos.
+8. Agregar segmentacion temporal para estimar curvas de stress/urgencia por ventana.
+9. Probar embeddings wav2vec 2.0, HuBERT o WavLM como features congeladas.
+10. Evaluar SpeechBrain o modelos SER preentrenados cuando haya datos y hardware adecuados.
+11. Implementar fusion multimodal calibrada: audio como rama primaria y texto como rama auxiliar.
+12. Agregar explainability: contribucion por indicador, importancias de variables y reportes de error.
+13. Agregar interfaz de inspeccion (Streamlit) con graficas de energia, F0, pausas y score temporal.
+14. Evaluar robustez por ruido, acento, edad, genero, discapacidad del habla y canal telefonico.
+15. Preparar API estable para integracion con el sistema multiagente; versionar esquema 2.0 del JSON (eliminar claves duplicadas del nivel raiz).
+16. Agregar type checker (`mypy`/`pyright`) como siguiente paso de tooling. *(Linter `ruff` ya configurado; tests de integracion ya agregados; `schema_version` ya versionado.)*
 
 ## Riesgos
 
@@ -210,7 +254,9 @@ Cambios en inferencia:
 - Adoptar openSMILE/eGeMAPS como extractor opcional en una rama experimental, no como dependencia obligatoria inmediata.
 - Usar Whisper solo para enriquecer texto, no para reemplazar prosodia.
 
-## Verificacion
+## Verificacion (historica, 2026-07-02)
+
+> Estado actual (2026-07-14): 187 tests pasando. Ver "Actualizacion 2026-07-14" arriba.
 
 Se ejecuto:
 

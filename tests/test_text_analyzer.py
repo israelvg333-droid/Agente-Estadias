@@ -1,8 +1,6 @@
 """Tests para src/semantic/text_analyzer.py."""
 from __future__ import annotations
 
-import pytest
-
 from src.semantic.text_analyzer import (
     _find_terms,
     _has_address_like_text,

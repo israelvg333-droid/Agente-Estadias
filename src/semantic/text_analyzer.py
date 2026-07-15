@@ -4,7 +4,6 @@ import re
 import unicodedata
 from typing import Any
 
-
 EMERGENCY_TERMS = {
     # Spanish
     "emergencia", "auxilio", "ayuda", "urgente", "ambulancia", "policia",
@@ -70,7 +69,9 @@ def analyze_text(text: str) -> dict[str, Any]:
     word_count = len(tokens)
     emergency_matches = _find_terms(normalized, EMERGENCY_TERMS)
     joke_matches = _find_terms(normalized, JOKE_TERMS)
-    has_location = bool(_find_terms(normalized, LOCATION_HINTS) or _has_address_like_text(normalized))
+    has_location = bool(
+        _find_terms(normalized, LOCATION_HINTS) or _has_address_like_text(normalized)
+    )
     has_victim = bool(_find_terms(normalized, VICTIM_HINTS))
     incident_matches = _find_terms(normalized, INCIDENT_HINTS)
 

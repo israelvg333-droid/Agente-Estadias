@@ -2,13 +2,11 @@
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
 from src.audio.acoustic_features import (
     _detect_anomalies,
     _estimate_clipping,
     _estimate_quality,
-    _estimate_snr,
     _zero_crossing_rate,
     empty_acoustic_features,
     enrich_with_text_rate,
@@ -231,3 +229,55 @@ class TestExtractAcousticFeatures:
         audio, sr = silence_wave
         result = extract_acoustic_features(audio, sr)
         assert result["silence_ratio"] > 0.5
+
+
+class TestVoiceStabilityAndSpectralShape:
+    """Features nuevas 2026-07-14: jitter/shimmer aproximados y forma espectral."""
+
+    def test_new_keys_present_in_extraction(self, sine_wave):
+        audio, sr = sine_wave
+        result = extract_acoustic_features(audio, sr)
+        for key in (
+            "estimated_jitter_ratio",
+            "estimated_shimmer_ratio",
+            "spectral_rolloff_hz",
+            "spectral_bandwidth_hz",
+            "spectral_flatness",
+        ):
+            assert key in result, key
+
+    def test_new_keys_none_in_empty(self):
+        result = empty_acoustic_features()
+        assert result["estimated_jitter_ratio"] is None
+        assert result["estimated_shimmer_ratio"] is None
+        assert result["spectral_rolloff_hz"] is None
+        assert result["spectral_bandwidth_hz"] is None
+        assert result["spectral_flatness"] is None
+
+    def test_spectral_shape_values_for_sine(self, sine_wave):
+        audio, sr = sine_wave
+        result = extract_acoustic_features(audio, sr)
+        assert result["spectral_rolloff_hz"] is not None
+        assert result["spectral_rolloff_hz"] > 0
+        assert result["spectral_bandwidth_hz"] is not None
+        assert result["spectral_bandwidth_hz"] > 0
+        assert result["spectral_flatness"] is not None
+        assert 0.0 <= result["spectral_flatness"] <= 1.0
+
+    def test_jitter_low_for_pure_sine(self, sine_wave):
+        audio, sr = sine_wave
+        result = extract_acoustic_features(audio, sr)
+        # Una onda pura de 440 Hz no tiene perturbacion de F0 entre tramas.
+        if result["estimated_jitter_ratio"] is not None:
+            assert result["estimated_jitter_ratio"] < 0.02
+
+    def test_shimmer_low_for_constant_amplitude(self, sine_wave):
+        audio, sr = sine_wave
+        result = extract_acoustic_features(audio, sr)
+        if result["estimated_shimmer_ratio"] is not None:
+            assert result["estimated_shimmer_ratio"] < 0.05
+
+    def test_shimmer_none_for_silence(self, silence_wave):
+        audio, sr = silence_wave
+        result = extract_acoustic_features(audio, sr)
+        assert result["estimated_shimmer_ratio"] is None

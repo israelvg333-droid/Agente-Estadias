@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
 from src.audio.vad import SilenceStats, _frame_audio, _run_lengths, estimate_silence
 

@@ -9,7 +9,6 @@ from src.audio.emergency_indicators import (
 )
 from src.utils.config import AudioAnalysisConfig
 
-
 _SPEECH_F0_MIN_HZ = 70.0
 _SPEECH_F0_MAX_HZ = 600.0
 _N_MFCC = 13
@@ -32,12 +31,18 @@ def extract_acoustic_features(
     peak = float(np.max(np.abs(audio))) if audio.size else 0.0
     zcr = _zero_crossing_rate(audio)
     silence = estimate_silence(audio, sample_rate)
-    f0_stats = _estimate_f0_stats(audio, sample_rate)
-    tempo = _estimate_tempo(audio, sample_rate)
+    # Ventana de analisis unica para los estimadores espectrales costosos.
+    analysis_audio = _analysis_window(audio, sample_rate, cfg.analysis_window_seconds)
+    f0_stats = _estimate_f0_stats(
+        analysis_audio, sample_rate, f0_min_hz=cfg.f0_min_hz, f0_max_hz=cfg.f0_max_hz
+    )
+    tempo = _estimate_tempo(analysis_audio, sample_rate)
     clipping = _estimate_clipping(audio)
     snr = _estimate_snr(audio, rms_frames)
-    mfcc_stats = _extract_mfcc_stats(audio, sample_rate)
-    spectral_centroid = _extract_spectral_centroid(audio, sample_rate)
+    mfcc_stats = _extract_mfcc_stats(analysis_audio, sample_rate)
+    spectral_centroid = _extract_spectral_centroid(analysis_audio, sample_rate)
+    spectral_shape = _extract_spectral_shape(analysis_audio, sample_rate)
+    shimmer = _estimate_shimmer(rms_frames)
     quality = _estimate_quality(
         rms=rms,
         peak=peak,
@@ -71,9 +76,14 @@ def extract_acoustic_features(
         "estimated_f0_min_hz": _round_optional(f0_stats["min"]),
         "estimated_f0_max_hz": _round_optional(f0_stats["max"]),
         "estimated_f0_std_hz": _round_optional(f0_stats["std"]),
+        "estimated_jitter_ratio": _round_optional(f0_stats["jitter_ratio"], 4),
+        "estimated_shimmer_ratio": _round_optional(shimmer, 4),
         "mfcc_mean": mfcc_stats["mean"],
         "mfcc_std": mfcc_stats["std"],
         "spectral_centroid_hz": _round_optional(spectral_centroid),
+        "spectral_rolloff_hz": _round_optional(spectral_shape["rolloff_hz"]),
+        "spectral_bandwidth_hz": _round_optional(spectral_shape["bandwidth_hz"]),
+        "spectral_flatness": _round_optional(spectral_shape["flatness"], 4),
         "silence_ratio": round(silence.silence_ratio, 6),
         "pause_count": silence.pause_count,
         "mean_pause_seconds": round(silence.mean_pause_seconds, 3),
@@ -118,9 +128,14 @@ def empty_acoustic_features(reason: str = "sin_audio") -> dict[str, Any]:
         "estimated_f0_min_hz": None,
         "estimated_f0_max_hz": None,
         "estimated_f0_std_hz": None,
+        "estimated_jitter_ratio": None,
+        "estimated_shimmer_ratio": None,
         "mfcc_mean": None,
         "mfcc_std": None,
         "spectral_centroid_hz": None,
+        "spectral_rolloff_hz": None,
+        "spectral_bandwidth_hz": None,
+        "spectral_flatness": None,
         "silence_ratio": None,
         "pause_count": None,
         "mean_pause_seconds": None,
@@ -174,11 +189,10 @@ def _zero_crossing_rate(audio: Any) -> float:
     return float(np.mean(np.abs(np.diff(np.signbit(audio)))))
 
 
-def _estimate_tempo(audio: Any, sample_rate: int) -> float | None:
+def _estimate_tempo(analysis_audio: Any, sample_rate: int) -> float | None:
     try:
         import librosa
 
-        analysis_audio = _analysis_window(audio, sample_rate)
         tempo = librosa.feature.rhythm.tempo(y=analysis_audio, sr=sample_rate)
         if len(tempo) == 0:
             return None
@@ -187,13 +201,23 @@ def _estimate_tempo(audio: Any, sample_rate: int) -> float | None:
         return None
 
 
-def _estimate_f0_stats(audio: Any, sample_rate: int) -> dict[str, float | None]:
-    """Estima estadísticas de F0 filtrando solo el rango de voz humana típica."""
+def _estimate_f0_stats(
+    analysis_audio: Any,
+    sample_rate: int,
+    f0_min_hz: float = _SPEECH_F0_MIN_HZ,
+    f0_max_hz: float = _SPEECH_F0_MAX_HZ,
+) -> dict[str, float | None]:
+    """Estima estadísticas de F0 filtrando solo el rango de voz humana típica.
+
+    Incluye `jitter_ratio`: perturbación relativa media de F0 entre tramas vocales
+    consecutivas. Es una aproximación al jitter clásico (que se mide ciclo a ciclo);
+    valores altos sugieren temblor o inestabilidad de la voz.
+    """
+    empty = {"mean": None, "min": None, "max": None, "std": None, "jitter_ratio": None}
     try:
         import librosa
         import numpy as np
 
-        analysis_audio = _analysis_window(audio, sample_rate)
         f0_values = librosa.yin(
             analysis_audio,
             fmin=librosa.note_to_hz("C2"),
@@ -202,30 +226,70 @@ def _estimate_f0_stats(audio: Any, sample_rate: int) -> dict[str, float | None]:
         )
         # Filtrar rango de voz humana (70-600 Hz); librosa.yin devuelve fmin para tramos
         # no vocales, por lo que np.isfinite no es suficiente como filtro.
-        valid = f0_values[
+        valid_mask = (
             np.isfinite(f0_values)
-            & (f0_values >= _SPEECH_F0_MIN_HZ)
-            & (f0_values <= _SPEECH_F0_MAX_HZ)
-        ]
+            & (f0_values >= f0_min_hz)
+            & (f0_values <= f0_max_hz)
+        )
+        valid = f0_values[valid_mask]
         if valid.size == 0:
-            return {"mean": None, "min": None, "max": None, "std": None}
+            return empty
         return {
             "mean": float(np.mean(valid)),
             "min": float(np.min(valid)),
             "max": float(np.max(valid)),
             "std": float(np.std(valid)),
+            "jitter_ratio": _f0_jitter_ratio(f0_values, valid_mask),
         }
     except Exception:
-        return {"mean": None, "min": None, "max": None, "std": None}
+        return empty
 
 
-def _extract_mfcc_stats(audio: Any, sample_rate: int) -> dict[str, list[float] | None]:
+def _f0_jitter_ratio(f0_values: Any, valid_mask: Any) -> float | None:
+    """Perturbación relativa media de F0 entre pares de tramas vocales consecutivas."""
+    import numpy as np
+
+    if f0_values.size < 2:
+        return None
+    pair_mask = valid_mask[:-1] & valid_mask[1:]
+    if int(np.sum(pair_mask)) < 2:
+        return None
+    prev = f0_values[:-1][pair_mask]
+    nxt = f0_values[1:][pair_mask]
+    return float(np.mean(np.abs(nxt - prev) / prev))
+
+
+def _estimate_shimmer(rms_frames: Any) -> float | None:
+    """Perturbación relativa media de amplitud RMS entre tramas activas consecutivas.
+
+    Aproximación al shimmer clásico (medido ciclo a ciclo). Solo considera tramas
+    con energía por encima del umbral de silencio para no medir transiciones
+    habla-pausa como inestabilidad de amplitud.
+    """
+    import numpy as np
+
+    if rms_frames.size < 4:
+        return None
+    threshold = max(
+        float(np.percentile(rms_frames, 20)), float(np.max(rms_frames)) * 0.08
+    )
+    active = rms_frames > threshold
+    pair_mask = active[:-1] & active[1:]
+    if int(np.sum(pair_mask)) < 2:
+        return None
+    prev = rms_frames[:-1][pair_mask]
+    nxt = rms_frames[1:][pair_mask]
+    return float(np.mean(np.abs(nxt - prev) / np.maximum(prev, 1e-8)))
+
+
+def _extract_mfcc_stats(
+    analysis_audio: Any, sample_rate: int
+) -> dict[str, list[float] | None]:
     """Extrae media y desviación estándar de los primeros N MFCCs."""
     try:
         import librosa
         import numpy as np
 
-        analysis_audio = _analysis_window(audio, sample_rate)
         mfccs = librosa.feature.mfcc(y=analysis_audio, sr=sample_rate, n_mfcc=_N_MFCC)
         return {
             "mean": [round(float(np.mean(mfccs[i])), 4) for i in range(_N_MFCC)],
@@ -235,17 +299,43 @@ def _extract_mfcc_stats(audio: Any, sample_rate: int) -> dict[str, list[float] |
         return {"mean": None, "std": None}
 
 
-def _extract_spectral_centroid(audio: Any, sample_rate: int) -> float | None:
+def _extract_spectral_centroid(analysis_audio: Any, sample_rate: int) -> float | None:
     """Calcula la media del centroide espectral (Hz). Relacionado con el brillo tonal."""
     try:
         import librosa
         import numpy as np
 
-        analysis_audio = _analysis_window(audio, sample_rate)
         centroid = librosa.feature.spectral_centroid(y=analysis_audio, sr=sample_rate)
         return float(np.mean(centroid))
     except Exception:
         return None
+
+
+def _extract_spectral_shape(
+    analysis_audio: Any, sample_rate: int
+) -> dict[str, float | None]:
+    """Extrae rolloff (85%), ancho de banda y flatness espectrales promedio.
+
+    Rolloff y ancho de banda complementan al centroide para caracterizar gritos y
+    voz tensa; la flatness (0-1) crece cuando el espectro se acerca a ruido, útil
+    como señal de calidad vocal degradada o audio ruidoso.
+    """
+    empty = {"rolloff_hz": None, "bandwidth_hz": None, "flatness": None}
+    try:
+        import librosa
+        import numpy as np
+
+        stft = np.abs(librosa.stft(analysis_audio))
+        rolloff = librosa.feature.spectral_rolloff(S=stft, sr=sample_rate)
+        bandwidth = librosa.feature.spectral_bandwidth(S=stft, sr=sample_rate)
+        flatness = librosa.feature.spectral_flatness(S=stft)
+        return {
+            "rolloff_hz": float(np.mean(rolloff)),
+            "bandwidth_hz": float(np.mean(bandwidth)),
+            "flatness": float(np.mean(flatness)),
+        }
+    except Exception:
+        return empty
 
 
 def _analysis_window(audio: Any, sample_rate: int, max_seconds: float = 20.0) -> Any:

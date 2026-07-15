@@ -5,7 +5,6 @@ from typing import Any
 
 from src.semantic.text_analyzer import normalize_text
 
-
 EVASIVE_PATTERNS = [
     # Spanish
     "no se", "quien sabe", "no quiero decir", "luego te digo", "no importa",

@@ -16,6 +16,9 @@ def build_result_payload(
     input_metadata: dict[str, Any],
 ) -> dict[str, Any]:
     return {
+        # 1.0 = esquema original sin versionar; 1.1 agrega jitter/shimmer, forma
+        # espectral, voice_tremor_score y este mismo campo (cambios aditivos).
+        "schema_version": "1.1",
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "input": input_metadata,
         "transcription": transcript,

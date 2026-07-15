@@ -3,7 +3,7 @@
 MVP local en Python para estimar de forma probabilistica la seriedad de una llamada a partir de audio y/o transcripcion. El foco actual es audio-first: la transcripcion se usa como apoyo, no como eje principal. El sistema combina:
 
 - Transcripcion local con Whisper, si esta instalado.
-- Extraccion acustica con `librosa` y `numpy` (energia, F0, silencios, pausas, MFCCs, centroide espectral, SNR y mas).
+- Extraccion acustica con `librosa` y `numpy` (energia, F0, jitter/shimmer aproximados, silencios, pausas, MFCCs, centroide/rolloff/ancho de banda/flatness espectrales, SNR y mas).
 - Indicadores paralinguisticos explicables para llamadas de emergencia: stress vocal, urgencia, nerviosismo, desesperacion, calma, agresividad acustica, inestabilidad vocal y confiabilidad del audio.
 - Analisis semantico por reglas (palabras clave, completitud, deteccion de intencion).
 - Analisis de coherencia (evasivas, contradicciones, cambios de tema).
@@ -134,6 +134,50 @@ Los tests cubren:
 - `test_vad.py`: deteccion de silencios y pausas
 - `test_acoustic_features.py`: features acusticas, clipping, SNR, MFCCs
 - `test_preprocessing.py`: validacion de rutas y normalizacion de audio
+- `test_evaluation.py`: metricas de evaluacion y muestreo estratificado
+- `test_procesar_dataset.py`: reprocesamiento selectivo, backfill acustico y CSV de features
+
+---
+
+## Evaluacion contra etiquetas manuales
+
+Flujo en dos pasos con `scripts/evaluate.py`:
+
+```powershell
+# 1. Generar la hoja de etiquetado (todas las DUDOSAS/IMPROCEDENTES + 15 SERIAS al azar,
+#    reproducible). Es etiquetado ciego: la hoja no muestra la categoria del sistema.
+python scripts/evaluate.py sample
+
+# 2. Completar `etiqueta_manual` (SERIA/DUDOSA/IMPROCEDENTE) en
+#    reportes/muestra_etiquetado.csv escuchando cada audio, y luego:
+python scripts/evaluate.py evaluate
+```
+
+`evaluate` cruza las etiquetas con `clasificacion_dataset.csv` y genera
+`reportes/reporte_evaluacion.md` con matriz de confusion, precision/recall/F1
+por clase, exactitud, macro-F1, AUROC y Brier score. La metrica prioritaria es
+el **recall de SERIA** (emergencias reales no degradadas). Acepta filas
+parcialmente etiquetadas: evalua lo capturado y reporta las pendientes.
+
+---
+
+## Dataset de features para entrenamiento supervisado
+
+El procesamiento batch (`procesar_dataset.py`) persiste el vector completo de
+features acusticas de cada llamada (`features_acusticas` en el checkpoint) y
+genera `features_dataset.csv`: una fila por llamada con 63 columnas de features
+(energia, F0, jitter/shimmer, MFCCs expandidos, forma espectral, silencios,
+indicadores acusticos de emergencia) mas categoria, scores y confianza. Es la
+tabla de entrada para los modelos baseline supervisados (regresion logistica,
+random forest, SVM).
+
+Para checkpoints generados antes de esta funcionalidad existe el backfill
+acustico, que recalcula las features reutilizando la transcripcion guardada
+(no carga Whisper, ~1-2 s por audio):
+
+```powershell
+python procesar_dataset.py --redo-acustico
+```
 
 ---
 
@@ -150,9 +194,14 @@ Cuando hay audio disponible se extraen:
 | `energy_std`              | Desviacion de energia                                |
 | `zero_crossing_rate`      | Tasa de cruces por cero                              |
 | `estimated_f0_hz`         | Frecuencia fundamental media (rango voz: 70-600 Hz) |
+| `estimated_jitter_ratio`  | Perturbacion relativa de F0 entre tramas vocales (temblor) |
+| `estimated_shimmer_ratio` | Perturbacion relativa de amplitud entre tramas activas |
 | `mfcc_mean`               | Media de cada uno de los 13 primeros MFCCs           |
 | `mfcc_std`                | Desviacion de cada MFCC                              |
 | `spectral_centroid_hz`    | Centroide espectral medio (brillo tonal)             |
+| `spectral_rolloff_hz`     | Rolloff espectral al 85% (energia en agudos)         |
+| `spectral_bandwidth_hz`   | Ancho de banda espectral medio                       |
+| `spectral_flatness`       | Flatness espectral (0-1; cercano a 1 = ruido)        |
 | `silence_ratio`           | Proporcion de silencio                               |
 | `pause_count`             | Numero de pausas detectadas                          |
 | `estimated_snr_db`        | SNR aproximado en dB                                 |
@@ -175,6 +224,7 @@ Cuando hay audio disponible se extraen:
 | `calm_score` | Evidencia acustica de baja activacion |
 | `aggression_score` | Energia alta, centroide espectral y ZCR elevados |
 | `voice_instability_score` | Variacion de F0 y energia |
+| `voice_tremor_score` | Temblor vocal desde jitter/shimmer aproximados (informativo; aun no participa en el score primario) |
 | `audio_reliability` | Confiabilidad de los indicadores segun calidad, SNR, clipping y silencio |
 | `seriousness_audio_score` | Estimacion acustica primaria para alimentar el score final |
 

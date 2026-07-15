@@ -3,8 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-
-SUPPORTED_AUDIO_EXTENSIONS = {".wav", ".mp3", ".m4a"}
+SUPPORTED_AUDIO_EXTENSIONS = {".wav", ".mp3", ".m4a", ".flac", ".ogg", ".aac", ".wma"}
 
 
 def validate_audio_path(audio_path: str | Path) -> Path:
@@ -12,9 +11,8 @@ def validate_audio_path(audio_path: str | Path) -> Path:
     if not path.exists():
         raise FileNotFoundError(f"No existe el archivo de audio: {path}")
     if path.suffix.lower() not in SUPPORTED_AUDIO_EXTENSIONS:
-        raise ValueError(
-            f"Formato no soportado: {path.suffix}. Use .wav, .mp3 o .m4a"
-        )
+        supported = ", ".join(sorted(SUPPORTED_AUDIO_EXTENSIONS))
+        raise ValueError(f"Formato no soportado: {path.suffix}. Use {supported}")
     return path
 
 

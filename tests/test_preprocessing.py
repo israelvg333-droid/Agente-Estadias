@@ -13,10 +13,16 @@ class TestValidateAudioPath:
             validate_audio_path(tmp_path / "no_existe.wav")
 
     def test_invalid_extension_raises(self, tmp_path):
-        f = tmp_path / "audio.ogg"
+        f = tmp_path / "audio.xyz"
         f.write_bytes(b"dummy")
         with pytest.raises(ValueError, match="Formato no soportado"):
             validate_audio_path(f)
+
+    def test_valid_ogg_extension(self, tmp_path):
+        f = tmp_path / "audio.ogg"
+        f.write_bytes(b"dummy")
+        path = validate_audio_path(f)
+        assert path == f
 
     def test_valid_wav_extension(self, tmp_path):
         f = tmp_path / "audio.wav"

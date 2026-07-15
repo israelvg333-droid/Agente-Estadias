@@ -63,7 +63,12 @@ def score_call(
     if silence_ratio is not None and silence_ratio > 0.65:
         seriousness -= 0.08
         evidence.append("Alta proporcion de silencio.")
-    if mean_energy is not None and max_energy is not None and mean_energy < 0.025 and max_energy < 0.12:
+    if (
+        mean_energy is not None
+        and max_energy is not None
+        and mean_energy < 0.025
+        and max_energy < 0.12
+    ):
         seriousness -= 0.04
         evidence.append("Energia vocal baja.")
     if longest_pause is not None and longest_pause >= 2.0:
@@ -122,7 +127,9 @@ def score_call(
             "urgency_score": urgency_score,
             "nervousness_score": nervousness_score,
         },
-        "safety_note": "Estimacion probabilistica. No recomienda colgar ni cerrar llamadas automaticamente.",
+        "safety_note": (
+            "Estimacion probabilistica. No recomienda colgar ni cerrar llamadas automaticamente."
+        ),
     }
 
 
@@ -178,7 +185,8 @@ def _estimate_confidence(
     audio_reliability = optional_float(indicators.get("audio_reliability"))
     if audio_reliability is not None:
         confidence += 0.12 * audio_reliability
-    if acoustic.get("audio_quality") in {"baja_senal", "mucho_silencio", "ruido_alto", "posible_saturacion"}:
+    low_quality = {"baja_senal", "mucho_silencio", "ruido_alto", "posible_saturacion"}
+    if acoustic.get("audio_quality") in low_quality:
         confidence -= 0.1
     if acoustic.get("acoustic_anomaly_flags"):
         confidence -= min(len(acoustic["acoustic_anomaly_flags"]) * 0.03, 0.12)

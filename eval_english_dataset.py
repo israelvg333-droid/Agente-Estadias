@@ -4,7 +4,8 @@ eval_english_dataset.py
 Evaluacion batch del dataset de llamadas en ingles.
 
 Uso:
-    python eval_english_dataset.py --audio-dir /ruta/al/dataset [--model tiny] [--output results_english.json]
+    python eval_english_dataset.py --audio-dir /ruta/al/dataset [--model tiny]
+        [--output results_english.json]
 
 El script acepta archivos .wav, .mp3 y .m4a.
 Genera un JSON con el resultado de cada llamada y un resumen estadistico.
@@ -16,7 +17,6 @@ import json
 import sys
 import time
 from pathlib import Path
-
 
 SUPPORTED_EXTENSIONS = {".wav", ".mp3", ".m4a"}
 
@@ -67,6 +67,7 @@ def collect_audio_files(directory: str, max_files: int) -> list[Path]:
 def run_single(audio_path: Path, model: str) -> dict:
     """Ejecuta el pipeline completo en un archivo de audio."""
     import argparse as _ap
+
     from main import run_pipeline
 
     fake_args = _ap.Namespace(
@@ -136,7 +137,7 @@ def main() -> None:
     total = len(audio_files)
     print(f"Archivos encontrados: {total}")
     print(f"Modelo Whisper: {args.model}")
-    print(f"Idioma forzado: en (ingles)")
+    print("Idioma forzado: en (ingles)")
     print("-" * 50)
 
     results = []

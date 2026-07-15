@@ -34,6 +34,8 @@ def derive_emergency_audio_indicators(
     clipping_ratio = optional_float(features.get("clipping_ratio"))
     zcr = optional_float(features.get("zero_crossing_rate"))
     spectral_centroid = optional_float(features.get("spectral_centroid_hz"))
+    jitter_ratio = optional_float(features.get("estimated_jitter_ratio"))
+    shimmer_ratio = optional_float(features.get("estimated_shimmer_ratio"))
 
     stress = _mean_valid(
         (
@@ -92,6 +94,20 @@ def derive_emergency_audio_indicators(
             _score_above(energy_std, 0.035, 0.14),
         )
     )
+    # Nuevo indicador aditivo (2026-07-14): temblor vocal desde jitter/shimmer
+    # aproximados. No participa aun en seriousness_audio_score para preservar la
+    # comparabilidad con el dataset 911 ya procesado; se integrara al score tras
+    # la calibracion con etiquetado manual.
+    # Umbrales ajustados a la distribucion observada en llamadas 911 reales
+    # (jitter aproximado trama a trama ~0.12-0.45; el jitter clasico ciclo a
+    # ciclo es un orden de magnitud menor y no aplica a esta aproximacion).
+    voice_tremor = _mean_valid(
+        (
+            _score_above(jitter_ratio, 0.12, 0.45),
+            _score_above(shimmer_ratio, 0.12, 0.32),
+            _score_above(f0_std, 25.0, 110.0),
+        )
+    )
     audio_reliability = _audio_reliability(features, snr_db, clipping_ratio, silence_ratio)
 
     seriousness_from_audio = clamp01(
@@ -113,6 +129,7 @@ def derive_emergency_audio_indicators(
         calm=calm,
         aggression=aggression,
         voice_instability=voice_instability,
+        voice_tremor=voice_tremor,
         audio_reliability=audio_reliability,
     )
 
@@ -124,6 +141,7 @@ def derive_emergency_audio_indicators(
         "calm_score": round(calm, 3),
         "aggression_score": round(aggression, 3),
         "voice_instability_score": round(voice_instability, 3),
+        "voice_tremor_score": round(voice_tremor, 3),
         "audio_reliability": round(audio_reliability, 3),
         "seriousness_audio_score": round(clamp01(seriousness_from_audio), 3),
         "indicator_flags": flags,
@@ -140,6 +158,7 @@ def empty_emergency_audio_indicators(reason: str = "sin_audio") -> dict[str, Any
         "calm_score": None,
         "aggression_score": None,
         "voice_instability_score": None,
+        "voice_tremor_score": None,
         "audio_reliability": 0.0,
         "seriousness_audio_score": None,
         "indicator_flags": [],
@@ -176,6 +195,7 @@ def _indicator_flags(**scores: float) -> list[str]:
         "nerviosismo_alto": scores["nervousness"] >= 0.65,
         "desesperacion_probable": scores["desperation"] >= 0.7,
         "voz_inestable": scores["voice_instability"] >= 0.65,
+        "temblor_vocal_probable": scores["voice_tremor"] >= 0.65,
         "calma_predominante": scores["calm"] >= 0.7,
         "agresividad_acustica": scores["aggression"] >= 0.7,
         "baja_confiabilidad_audio": scores["audio_reliability"] < 0.45,
